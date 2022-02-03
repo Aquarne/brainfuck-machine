@@ -21,7 +21,7 @@ struct bfm
 
 extern struct bfm g_bfm;
 
-bool bfm_init(const char *file, int cells);
+bool bfm_init(u8 *bytecode_data, u32 bytecode_size, int cells);
 void bfm_run();
 void bfm_terminate();
 

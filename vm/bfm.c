@@ -22,61 +22,24 @@ enum bytecode_instructions
     INSTR_JMPZ          // Jump to an instruction if cell value is zero.
 };
 
-static u8* read_file(const char *path, u32 *size)
-{
-    u8 *buffer = NULL;
-
-    FILE *file = fopen(path, "rb");
-    if (!file)
-    {
-        fprintf(stderr, "Failed to open file '%s'\n", path);
-        return NULL;
-    }
-
-    fseek(file, 0, SEEK_END);
-    long long file_size = ftell(file);
-    rewind(file);
-
-    buffer = malloc(file_size);
-    if (!buffer)
-    {
-        fprintf(stderr, "Not enough memory!\n");
-        goto end;
-    }
-
-    size_t bytes_read = fread(buffer, 1, file_size, file);
-    if (bytes_read != file_size)
-    {
-        fprintf(stderr, "Failed to read file '%s' properly!\n", path);
-        free(buffer);
-        buffer = NULL;
-        goto end;
-    }
-
-    *size = (u32)file_size;
-
-end:
-    fclose(file);
-
-    return buffer;
-}
-
-bool bfm_init(const char *file, int cells)
+bool bfm_init(u8 *bytecode_data, u32 bytecode_size, int cells)
 {
     bool success = true;
 
+    g_bfm.bytecode.data = bytecode_data;
+    g_bfm.bytecode.size = bytecode_size;
+    g_bfm.registers.ip = g_bfm.bytecode.data;
+
     g_bfm.registers.bp = malloc(cells);
-    g_bfm.registers.sp = g_bfm.registers.bp;
-
-    memset(g_bfm.registers.bp, 0, cells);
-
-    g_bfm.bytecode.data = read_file(file, &g_bfm.bytecode.size);
-    if (!g_bfm.bytecode.data)
+    if (!g_bfm.registers.bp)
     {
+        fprintf(stderr, "Not enough memory!\n");
         success = false;
         goto end;
     }
-    g_bfm.registers.ip = g_bfm.bytecode.data;
+    g_bfm.registers.sp = g_bfm.registers.bp;
+
+    memset(g_bfm.registers.bp, 0, cells);
 
 end:
     return success;
@@ -123,15 +86,25 @@ void bfm_run()
                 break;
             case INSTR_JMP:
                 {
-                    u32 offset = *(u32*)(g_bfm.registers.ip);
+                    u32 offset =
+                        (g_bfm.registers.ip[0])         |
+                        (g_bfm.registers.ip[1] << 8)    |
+                        (g_bfm.registers.ip[2] << 16)   |
+                        (g_bfm.registers.ip[3] << 24);
                     g_bfm.registers.ip += 4;
+
                     g_bfm.registers.ip = g_bfm.bytecode.data + offset;
                 }
                 break;
             case INSTR_JMPZ:
                 {
-                    u32 offset = *(u32*)(g_bfm.registers.ip);
-                    g_bfm.registers.ip += 4;;
+                    u32 offset =
+                        (g_bfm.registers.ip[0])         |
+                        (g_bfm.registers.ip[1] << 8)    |
+                        (g_bfm.registers.ip[2] << 16)   |
+                        (g_bfm.registers.ip[3] << 24);
+                    g_bfm.registers.ip += 4;
+
                     if (!(*g_bfm.registers.sp))
                     {
                         g_bfm.registers.ip = g_bfm.bytecode.data + offset;
@@ -144,6 +117,6 @@ void bfm_run()
 
 void bfm_terminate()
 {
-    free(g_bfm.bytecode.data);
+    free(g_bfm.bytecode.data - 7);
     free(g_bfm.registers.bp);
 }

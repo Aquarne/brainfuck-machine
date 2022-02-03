@@ -6,6 +6,8 @@ set(
     defs.h
     bfm.h
     bfm.c
+    bfe.h
+    bfe.c
 )
 
 add_executable(bfm ${SOURCE})

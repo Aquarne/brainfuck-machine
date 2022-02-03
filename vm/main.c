@@ -1,11 +1,12 @@
 #include "bfm.h"
+#include "bfe.h"
 
 #include <stdio.h>
 
 int main(int argc, const char **argv)
 {
     const char *file = NULL;
-    int cells = 30000;
+    int cells = 0;
 
     if (argc > 1)
     {
@@ -28,9 +29,15 @@ int main(int argc, const char **argv)
                             int new_cells;
                             if (i+1 >= argc ||
                                 sscanf(argv[i+1], "%d", &new_cells) == 0 ||
-                                new_cells <= 0)
+                                new_cells < 0)
                             {
-                                fprintf(stderr, "Invalid value for '%s'\n", s);
+                                fprintf(stderr, "Invalid value for '%s' - cannot be negative\n", s);
+                                return 1;
+                            }
+
+                            if (new_cells >= 0xFFFFFFU)
+                            {
+                                fprintf(stderr, "Invalid value for '%s' - over the limit\n", s);
                                 return 1;
                             }
 
@@ -60,7 +67,18 @@ int main(int argc, const char **argv)
         return 1;
     }
 
-    if (!bfm_init(file, cells))
+    struct bfe_file bfe_file;
+    if (!bfe_file_read(file, &bfe_file))
+    {
+        return 1;
+    }
+
+    if (!cells)
+    {
+        cells = bfe_file.header.cells;
+    }
+
+    if (!bfm_init(bfe_file.bytecode.data, bfe_file.bytecode.size, cells))
     {
         return 1;
     }
