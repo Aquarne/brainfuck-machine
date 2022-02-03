@@ -3,6 +3,9 @@ cmake_minimum_required(VERSION 3.8)
 set(
     SOURCE
     main.c
+    defs.h
+    lexer.h
+    lexer.c
 )
 
 add_executable(bfc ${SOURCE})
