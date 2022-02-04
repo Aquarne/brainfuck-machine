@@ -1,91 +1,121 @@
-#include "lexer.h"
+#include "bfc.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 
-static u8* read_file(const char *path, u32 *size)
-{
-    u8 *buffer = NULL;
-
-    FILE *file = fopen(path, "rb");
-    if (!file)
-    {
-        fprintf(stderr, "Failed to open file '%s'\n", path);
-        return NULL;
-    }
-
-    fseek(file, 0, SEEK_END);
-    long long file_size = ftell(file);
-    rewind(file);
-
-    buffer = malloc(file_size);
-    if (!buffer)
-    {
-        fprintf(stderr, "Not enough memory!\n");
-        goto end;
-    }
-
-    size_t bytes_read = fread(buffer, 1, file_size, file);
-    if (bytes_read != file_size)
-    {
-        fprintf(stderr, "Failed to read file '%s' properly!\n", path);
-        free(buffer);
-        buffer = NULL;
-        goto end;
-    }
-
-    *size = (u32)file_size;
-
-end:
-    fclose(file);
-
-    return buffer;
-}
-
-static char token_to_char(enum bf_token_type type)
-{
-    switch (type)
-    {
-        case TOKEN_RSHIFT: return '>';
-        case TOKEN_LSHIFT: return '<';
-        case TOKEN_PLUS: return '+';
-        case TOKEN_MINUS: return '-';
-        case TOKEN_PERIOD: return '.';
-        case TOKEN_COMMA: return ',';
-        case TOKEN_LBRACKET: return '[';
-        case TOKEN_RBRACKET: return ']';
-    }
-
-    return 'X';
-}
-
 int main(int argc, const char **argv)
 {
-    u32 size;
-    u8 *src = read_file(argv[1], &size);
-    if (!src)
+    const char *ifile = NULL;
+    const char *ofile = NULL;
+    int cells = 30000;
+
+    if (argc > 1)
+    {
+        for (int i = 1; i < argc; i++)
+        {
+            const char *s = argv[i];
+            switch (s[0])
+            {
+                case '-':
+                {
+                    switch (s[1])
+                    {
+                        case 'n':
+                        {
+                            if (s[2])
+                            {
+                                goto invalid_opt;
+                            }
+
+                            int new_cells;
+                            if (i+1 >= argc ||
+                                sscanf(argv[i+1], "%d", &new_cells) == 0)
+                            {
+                                fprintf(stderr, "Invalid value for '%s' - missing argument\n", s);
+                                return 1;
+                            }
+
+                            if (new_cells < 0)
+                            {
+                                fprintf(stderr, "Invalid value for '%s' - cannot be negative\n", s);
+                                return 1;
+                            }
+
+                            if (new_cells == 0)
+                            {
+                                fprintf(stderr, "Invalid value for '%s' - cannot be zero\n", s);
+                                return 1;
+                            }
+
+                            if (new_cells >= 0xFFFFFFU)
+                            {
+                                fprintf(stderr, "Invalid value for '%s' - over the limit\n", s);
+                                return 1;
+                            }
+
+                            cells = new_cells;
+                            i++;
+
+                            continue;
+                        }
+
+                        case 'o':
+                        {
+                            if (s[2])
+                            {
+                                goto invalid_opt;
+                            }
+
+                            if (i+1 >= argc)
+                            {
+                                fprintf(stderr, "Invalid value for '%s' - missing argument\n", s);
+                                return 1;
+                            }
+
+                            ofile = argv[i+1];
+                            i++;
+
+                            continue;
+                        }
+                    }
+
+                invalid_opt:
+                    fprintf(stderr, "Invalid option '%s'\n", s);
+                    return 1;
+                }
+                break;
+
+                default:
+                    if (!ifile)
+                        ifile = s;
+                    break;
+            }
+        }
+    }
+
+    if (!ifile)
+    {
+        fprintf(stderr, "Input file not provided!\n");
+        return 1;
+    }
+
+    if (!ofile)
+    {
+        ofile = "out.bfe";
+    }
+
+    if (!bfc_init(cells, ifile, ofile))
     {
         return 1;
     }
 
-    struct lexer lexer = (struct lexer)
+    if (!bfc_compile())
     {
-        .current = src,
-        .end = src + size
-    };
-
-    struct bf_token token;
-    while (lexer_scan(&lexer, &token))
-    {
-        if (token.type == TOKEN_EOF)
-        {
-            break;
-        }
-
-        printf("%3hhu | %c\n", token.count, token_to_char(token.type));
+        bfc_terminate();
+        return 1;
     }
 
-    free(src);
+    bfc_terminate();
 
     return 0;
 }

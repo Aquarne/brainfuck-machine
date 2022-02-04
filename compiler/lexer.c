@@ -65,9 +65,21 @@ bool lexer_scan(struct lexer *lexer, struct bf_token *out)
         COMMON_CASE('<', TOKEN_LSHIFT)
         COMMON_CASE('+', TOKEN_PLUS)
         COMMON_CASE('-', TOKEN_MINUS)
-        COMMON_CASE('.', TOKEN_PERIOD)
-        COMMON_CASE(',', TOKEN_COMMA)
 
+        case '.':
+            *out = (struct bf_token)
+            {
+                .type = TOKEN_PERIOD,
+                .count = 1
+            };
+            break;
+        case ',':
+            *out = (struct bf_token)
+            {
+                .type = TOKEN_COMMA,
+                .count = 1
+            };
+            break;
         case '[':
             *out = (struct bf_token)
             {

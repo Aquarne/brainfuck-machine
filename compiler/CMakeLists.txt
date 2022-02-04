@@ -6,6 +6,8 @@ set(
     defs.h
     lexer.h
     lexer.c
+    bfc.h
+    bfc.c
 )
 
 add_executable(bfc ${SOURCE})

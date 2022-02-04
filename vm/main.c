@@ -28,8 +28,13 @@ int main(int argc, const char **argv)
 
                             int new_cells;
                             if (i+1 >= argc ||
-                                sscanf(argv[i+1], "%d", &new_cells) == 0 ||
-                                new_cells < 0)
+                                sscanf(argv[i+1], "%d", &new_cells) == 0)
+                            {
+                                fprintf(stderr, "Invalid value for '%s' - missing argument\n", s);
+                                return 1;
+                            }
+
+                            if (new_cells < 0)
                             {
                                 fprintf(stderr, "Invalid value for '%s' - cannot be negative\n", s);
                                 return 1;
